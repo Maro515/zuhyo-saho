@@ -380,6 +380,26 @@
     </div>`;
   }
 
+  /* 項目ページ末尾の「参考文献」。章末の一覧と同じデータ（PubMed検証済み）を、
+     読んでいるその場で原著へ飛べるようにカードとして再掲する。 */
+  function renderTopicPapersHtml(ch, topic) {
+    const ps = (window.PAPERS && window.PAPERS[ch.id + ":" + topic.id]) || [];
+    if (!ps.length) return "";
+    return `<div class="card refs" id="sec-refs" style="--chip-color:${ch.color};--chip-soft:${ch.colorSoft}">
+      <h2><span class="ico">📄</span>参考文献 — この手法を使った代表論文</h2>
+      <ul class="ref-list">${ps.map((p) => `
+        <li>
+          <a class="ref-title" href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener noreferrer">${escapeHtml(p.title)}</a>
+          <span class="ref-meta">${escapeHtml(p.authors)} ・ <i>${escapeHtml(p.journal)}</i> ${escapeHtml(String(p.year))}</span>
+          ${p.note ? `<span class="ref-note">${escapeHtml(p.note)}</span>` : ""}
+          <span class="ref-links">
+            <a href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener noreferrer">PubMed ${p.pmid}</a>
+            ${p.doi ? `<a href="https://doi.org/${encodeURI(p.doi)}" target="_blank" rel="noopener noreferrer">doi:${escapeHtml(p.doi)}</a>` : ""}
+          </span>
+        </li>`).join("")}</ul>
+    </div>`;
+  }
+
   function renderCautionHtml(topic) {
     if (!topic.cautions || !topic.cautions.length) return "";
     return `<div class="card caution" id="sec-caution">
@@ -448,6 +468,7 @@
     items.push({ id: "widgetHost", label: "触って理解する" });
     if (topic.cautions && topic.cautions.length) items.push({ id: "sec-caution", label: "誤読しやすい" });
     if (topic.quiz && topic.quiz.length) items.push({ id: "quizHost", label: "理解度クイズ" });
+    if (window.PAPERS && window.PAPERS[ch.id + ":" + topic.id]) items.push({ id: "sec-refs", label: "参考文献" });
     if (items.length < 2) return;
 
     const rail = document.createElement("nav");
@@ -514,6 +535,7 @@
         </div>
         ${renderCautionHtml(topic)}
         <div id="quizHost"></div>
+        ${renderTopicPapersHtml(ch, topic)}
         <div class="topic-nav">
           ${prev ? `<a class="nav-card prev" href="#/${ch.id}/${prev.id}"><span>← 前の項目</span><b>${prev.title}</b></a>` : `<a class="nav-card prev" href="#/${ch.id}"><span>← 章の一覧</span><b>${ch.title}</b></a>`}
           ${next ? `<a class="nav-card next" href="#/${ch.id}/${next.id}"><span>次の項目 →</span><b>${next.title}</b></a>` : `<a class="nav-card next" href="#/${ch.id}"><span>章を完了 →</span><b>一覧に戻る</b></a>`}

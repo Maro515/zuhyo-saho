@@ -723,6 +723,42 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 .chapter-grid .chapter-card:nth-child(n+10) { animation-delay: .38s; }
 
 /* =========================================================================
+   項目ページ末尾：参考文献カード
+   ========================================================================= */
+.card.refs {
+  background: linear-gradient(165deg, rgba(20,26,52,0.62), rgba(12,15,32,0.62));
+  border-color: color-mix(in srgb, var(--chip-color, var(--cyan)) 24%, var(--border));
+}
+.card.refs h2 { color: var(--chip-color, var(--cyan)); }
+.ref-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 18px; }
+.ref-list li {
+  position: relative; padding: 15px 17px; border-radius: var(--radius-s);
+  background: rgba(255,255,255,0.025); border: 1px solid var(--border);
+  border-left: 3px solid color-mix(in srgb, var(--chip-color, var(--cyan)) 55%, transparent);
+}
+.ref-title {
+  display: block; font-size: 15.5px; line-height: 1.66; font-weight: 700;
+  color: #b9ccff; text-decoration: none;
+}
+.ref-title:hover { color: var(--cyan); text-decoration: underline; }
+.ref-meta { display: block; margin-top: 5px; font-size: 13px; color: var(--text-faint); line-height: 1.6; }
+.ref-meta i { font-style: italic; color: var(--text-muted); }
+.ref-note { display: block; margin-top: 8px; font-size: 14.5px; color: var(--text); line-height: 1.8; }
+.ref-links { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 11px; }
+.ref-links a {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-decoration: none;
+  padding: 4px 11px; border-radius: 999px;
+  color: var(--chip-color, var(--cyan));
+  background: var(--chip-soft, rgba(58,231,255,0.12));
+  border: 1px solid color-mix(in srgb, var(--chip-color, var(--cyan)) 32%, transparent);
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.ref-links a:hover {
+  background: color-mix(in srgb, var(--chip-color, var(--cyan)) 22%, transparent);
+  box-shadow: 0 0 16px -4px var(--chip-color, var(--cyan));
+}
+
+/* =========================================================================
    章末：代表論文リスト
    ========================================================================= */
 .papers-box {
