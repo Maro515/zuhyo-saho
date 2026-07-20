@@ -286,7 +286,7 @@
   function plot(container, opts) {
     const o = Object.assign({
       width: 560, height: 320,
-      margin: { top: 18, right: 22, bottom: 44, left: 54 },
+      margin: { top: 18, right: 22, bottom: 48, left: 60 },
       xDomain: [0, 1], yDomain: [0, 1], xTicks: 5, yTicks: 5,
       xFmt: (v) => Math.round(v * 100) / 100, yFmt: (v) => Math.round(v * 100) / 100,
       xLabel: "", yLabel: "", grid: true,
@@ -297,27 +297,56 @@
     const x = (v) => margin.left + ((v - o.xDomain[0]) / (o.xDomain[1] - o.xDomain[0])) * w;
     const y = (v) => margin.top + h - ((v - o.yDomain[0]) / (o.yDomain[1] - o.yDomain[0])) * h;
     const s = el("svg", { viewBox: `0 0 ${width} ${height}`, width: "100%", height: "auto", style: "display:block;max-width:100%;font-family:inherit" });
-    const gGrid = el("g");
-    if (o.grid) {
-      for (let i = 0; i <= o.yTicks; i++) {
-        const v = o.yDomain[0] + (i * (o.yDomain[1] - o.yDomain[0])) / o.yTicks;
-        const yy = y(v);
-        append(gGrid, el("line", { x1: margin.left, x2: margin.left + w, y1: yy, y2: yy, stroke: "#e9ecf4", "stroke-width": 1 }));
-        append(gGrid, el("text", { x: margin.left - 8, y: yy + 3.5, "text-anchor": "end", "font-size": 10.5, fill: "#8a93a8", text: o.yFmt(v) }));
-      }
+    // SVG は viewBox でスケールされるため、同じ font-size でもウィジェットにより
+    // 実効サイズが 8px〜25px までばらつく。先に DOM へ挿入して実寸を測り、
+    // 「画面上で何px に見えるか」を基準に文字サイズを逆算する。
+    container.innerHTML = "";
+    container.appendChild(s);
+    const renderedW = s.getBoundingClientRect().width || container.clientWidth || width;
+    const k = renderedW > 0 ? width / renderedW : 1; // viewBox単位 / 画面px
+    const fit = (targetPx, maxUnits) => {
+      const units = targetPx * k;
+      return Math.max(7, Math.min(units, maxUnits, 26));
+    };
+
+    // yラベルは margin.left の内側に収まる必要がある（はみ出すと先頭の桁が切れる）
+    const yVals = [];
+    if (o.grid && o.yTicks > 0) {
+      for (let i = 0; i <= o.yTicks; i++) yVals.push(o.yDomain[0] + (i * (o.yDomain[1] - o.yDomain[0])) / o.yTicks);
     }
-    for (let i = 0; i <= o.xTicks; i++) {
-      const v = o.xDomain[0] + (i * (o.xDomain[1] - o.xDomain[0])) / o.xTicks;
-      append(gGrid, el("text", { x: x(v), y: margin.top + h + 18, "text-anchor": "middle", "font-size": 10.5, fill: "#8a93a8", text: o.xFmt(v) }));
+    const maxYChars = yVals.reduce((m, v) => Math.max(m, String(o.yFmt(v)).length), 1);
+    const yTickFs = fit(12.5, (margin.left - 10) / (maxYChars * 0.58));
+    // xラベルは隣の目盛りと衝突しない幅に収める
+    const maxXChars = o.xTicks > 0
+      ? Array.from({ length: o.xTicks + 1 }, (_, i) => String(o.xFmt(o.xDomain[0] + (i * (o.xDomain[1] - o.xDomain[0])) / o.xTicks)).length).reduce((m, n) => Math.max(m, n), 1)
+      : 1;
+    const xTickFs = fit(12.5, (w / (o.xTicks + 1) * 0.95) / (maxXChars * 0.58));
+    const axisFs = fit(13.5, Math.min(margin.bottom - 4, 30));
+
+    const gGrid = el("g");
+    // yTicks/xTicks が 0 のときは「目盛りなし」の意。ループを回すと i/0 が NaN になり
+    // ラベルに "NaN" が描かれてしまうので、必ず 0 以下は描画しない。
+    yVals.forEach((v) => {
+      const yy = y(v);
+      append(gGrid, el("line", { x1: margin.left, x2: margin.left + w, y1: yy, y2: yy, stroke: "#e9ecf4", "stroke-width": 1 }));
+      append(gGrid, el("text", { x: margin.left - 8, y: yy + yTickFs * 0.35, "text-anchor": "end", "font-size": +yTickFs.toFixed(1), fill: "#7b8497", text: o.yFmt(v) }));
+    });
+    if (o.xTicks > 0) {
+      for (let i = 0; i <= o.xTicks; i++) {
+        const v = o.xDomain[0] + (i * (o.xDomain[1] - o.xDomain[0])) / o.xTicks;
+        const label = String(o.xFmt(v));
+        // 端の目盛りが SVG の外にはみ出して切れないよう、中心位置を内側へ寄せる
+        const halfW = label.length * xTickFs * 0.29;
+        const cx = Math.max(halfW + 1, Math.min(width - halfW - 1, x(v)));
+        append(gGrid, el("text", { x: cx, y: margin.top + h + xTickFs + 6, "text-anchor": "middle", "font-size": +xTickFs.toFixed(1), fill: "#7b8497", text: label }));
+      }
     }
     append(gGrid, el("line", { x1: margin.left, x2: margin.left + w, y1: margin.top + h, y2: margin.top + h, stroke: "#c7cce0", "stroke-width": 1.2 }));
     append(gGrid, el("line", { x1: margin.left, x2: margin.left, y1: margin.top, y2: margin.top + h, stroke: "#c7cce0", "stroke-width": 1.2 }));
-    if (o.xLabel) append(gGrid, el("text", { x: margin.left + w / 2, y: height - 3, "text-anchor": "middle", "font-size": 11.5, fill: "#616a7d", "font-weight": 700, text: o.xLabel }));
-    if (o.yLabel) append(gGrid, el("text", { x: 13, y: margin.top + h / 2, "text-anchor": "middle", "font-size": 11.5, fill: "#616a7d", "font-weight": 700, transform: `rotate(-90 13 ${margin.top + h / 2})`, text: o.yLabel }));
-    append(s, gGrid);
-    container.innerHTML = "";
-    container.appendChild(s);
-    return { svg: s, x, y, w, h, margin, width, height, xDomain: o.xDomain, yDomain: o.yDomain };
+    if (o.xLabel) append(gGrid, el("text", { x: margin.left + w / 2, y: height - 3, "text-anchor": "middle", "font-size": +axisFs.toFixed(1), fill: "#565f73", "font-weight": 700, text: o.xLabel }));
+    if (o.yLabel) append(gGrid, el("text", { x: axisFs, y: margin.top + h / 2, "text-anchor": "middle", "font-size": +axisFs.toFixed(1), fill: "#565f73", "font-weight": 700, transform: `rotate(-90 ${axisFs} ${margin.top + h / 2})`, text: o.yLabel }));
+    s.insertBefore(gGrid, s.firstChild);
+    return { svg: s, x, y, w, h, margin, width, height, xDomain: o.xDomain, yDomain: o.yDomain, k, fs: (px) => +(px * k).toFixed(1) };
   }
 
   function dot(ctx, dx, dy, attrs) { const c = el("circle", Object.assign({ cx: ctx.x(dx), cy: ctx.y(dy), r: 4, fill: "#3b63e0", opacity: 0.85 }, attrs)); ctx.svg.appendChild(c); return c; }
@@ -345,8 +374,11 @@
   function vline(ctx, dx, attrs) { const p = el("line", Object.assign({ x1: ctx.x(dx), x2: ctx.x(dx), y1: ctx.margin.top, y2: ctx.margin.top + ctx.h, stroke: "#c7cce0", "stroke-width": 1.4, "stroke-dasharray": "4 3" }, attrs)); ctx.svg.appendChild(p); return p; }
   function hline(ctx, dy, attrs) { const p = el("line", Object.assign({ x1: ctx.margin.left, x2: ctx.margin.left + ctx.w, y1: ctx.y(dy), y2: ctx.y(dy), stroke: "#c7cce0", "stroke-width": 1.4, "stroke-dasharray": "4 3" }, attrs)); ctx.svg.appendChild(p); return p; }
   function rectData(ctx, x0, y0, x1, y1, attrs) { const p = el("rect", Object.assign({ x: Math.min(ctx.x(x0), ctx.x(x1)), y: Math.min(ctx.y(y0), ctx.y(y1)), width: Math.abs(ctx.x(x1) - ctx.x(x0)), height: Math.abs(ctx.y(y1) - ctx.y(y0)), fill: "#3b63e0" }, attrs)); ctx.svg.appendChild(p); return p; }
-  function text(ctx, dx, dy, str, attrs) { const t = el("text", Object.assign({ x: ctx.x(dx), y: ctx.y(dy), "font-size": 11.5, fill: "#1b2233" }, attrs)); t.textContent = str; ctx.svg.appendChild(t); return t; }
-  function textPx(ctx, px, py, str, attrs) { const t = el("text", Object.assign({ x: px, y: py, "font-size": 11.5, fill: "#1b2233" }, attrs)); t.textContent = str; ctx.svg.appendChild(t); return t; }
+  // 既定の font-size は plot() が測ったスケール k から逆算し、画面上 12.5px 相当に揃える。
+  // 呼び出し側が font-size を明示している場合はそちらを優先する。
+  function defaultFs(ctx) { return ctx && ctx.fs ? ctx.fs(12.5) : 12.5; }
+  function text(ctx, dx, dy, str, attrs) { const t = el("text", Object.assign({ x: ctx.x(dx), y: ctx.y(dy), "font-size": defaultFs(ctx), fill: "#1b2233" }, attrs)); t.textContent = str; ctx.svg.appendChild(t); return t; }
+  function textPx(ctx, px, py, str, attrs) { const t = el("text", Object.assign({ x: px, y: py, "font-size": defaultFs(ctx), fill: "#1b2233" }, attrs)); t.textContent = str; ctx.svg.appendChild(t); return t; }
   function group(ctx) { const g = el("g"); ctx.svg.appendChild(g); return g; }
 
   function fmt(v, d = 3) {
