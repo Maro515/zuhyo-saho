@@ -397,6 +397,27 @@
             ${p.doi ? `<a href="https://doi.org/${encodeURI(p.doi)}" target="_blank" rel="noopener noreferrer">doi:${escapeHtml(p.doi)}</a>` : ""}
           </span>
         </li>`).join("")}</ul>
+      ${renderProtocolsHtml(ch, topic)}
+    </div>`;
+  }
+
+  /* プロトコル集・メーカー技術資料・公式ドキュメントへのリンク。
+     原著論文と違い機械照合ができないため、収録時に全URLの到達性を実測している。 */
+  const PROTO_ICON = { protocol: "🧪", vendor: "🏭", tool: "⚙️", guideline: "📐", db: "🗄" };
+  const PROTO_LABEL = { protocol: "プロトコル", vendor: "メーカー資料", tool: "ソフトウェア", guideline: "報告ガイドライン", db: "データベース" };
+  function renderProtocolsHtml(ch, topic) {
+    const rs = (window.PROTOCOLS && window.PROTOCOLS[ch.id + ":" + topic.id]) || [];
+    if (!rs.length) return "";
+    return `<div class="proto-block">
+      <div class="proto-head">🔧 プロトコル・技術資料</div>
+      <ul class="proto-list">${rs.map((r) => `
+        <li>
+          <a class="proto-link" href="${encodeURI(r.url)}" target="_blank" rel="noopener noreferrer">
+            <span class="proto-type" data-t="${escapeHtml(r.type || "protocol")}">${PROTO_ICON[r.type] || "🔗"} ${PROTO_LABEL[r.type] || "資料"}</span>
+            <span class="proto-label">${escapeHtml(r.label)}</span>
+          </a>
+          ${r.note ? `<span class="proto-note">${escapeHtml(r.note)}</span>` : ""}
+        </li>`).join("")}</ul>
     </div>`;
   }
 

@@ -758,6 +758,35 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   box-shadow: 0 0 16px -4px var(--chip-color, var(--cyan));
 }
 
+/* --- 参考文献カード内：プロトコル・技術資料 --- */
+.proto-block { margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--border); }
+.proto-head {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 13px;
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em;
+  padding: 4px 12px; border-radius: 999px;
+  color: var(--chip-color, var(--cyan));
+  background: var(--chip-soft, rgba(58,231,255,0.12));
+  border: 1px solid color-mix(in srgb, var(--chip-color, var(--cyan)) 34%, transparent);
+}
+.proto-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.proto-list li { padding: 0; }
+.proto-link {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  text-decoration: none; color: inherit;
+}
+.proto-type {
+  flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; font-weight: 800;
+  padding: 3px 10px; border-radius: 999px; letter-spacing: 0.04em;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-muted);
+}
+.proto-type[data-t="vendor"] { color: #ffcf6b; border-color: rgba(255,207,107,0.34); background: rgba(255,207,107,0.09); }
+.proto-type[data-t="tool"] { color: #86f5cf; border-color: rgba(56,242,176,0.32); background: rgba(56,242,176,0.09); }
+.proto-type[data-t="guideline"] { color: #ffa9ba; border-color: rgba(255,107,138,0.32); background: rgba(255,107,138,0.09); }
+.proto-type[data-t="db"] { color: #d3b8ff; border-color: rgba(185,139,255,0.34); background: rgba(185,139,255,0.10); }
+.proto-label { font-size: 14.5px; font-weight: 600; color: #b9ccff; line-height: 1.6; }
+.proto-link:hover .proto-label { color: var(--cyan); text-decoration: underline; }
+.proto-note { display: block; margin-top: 4px; padding-left: 2px; font-size: 13.5px; color: var(--text-muted); line-height: 1.75; }
+
 /* =========================================================================
    章末：代表論文リスト
    ========================================================================= */
