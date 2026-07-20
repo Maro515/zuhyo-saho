@@ -758,6 +758,59 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   box-shadow: 0 0 16px -4px var(--chip-color, var(--cyan));
 }
 
+/* =========================================================================
+   ページの締めくくり：研究者の心得（道場の締め。章カラーに依らず金で統一）
+   ========================================================================= */
+.creed-card {
+  position: relative; overflow: hidden;
+  margin-bottom: 18px; padding: 26px 28px; border-radius: var(--radius-l);
+  background: linear-gradient(150deg, rgba(255,207,107,0.10), rgba(24,20,10,0.55) 62%);
+  border: 1px solid rgba(255,207,107,0.30);
+  box-shadow: var(--shadow-m), inset 0 0 60px rgba(255,207,107,0.05);
+  backdrop-filter: blur(11px); -webkit-backdrop-filter: blur(11px);
+}
+.creed-card::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, #ffcf6b 22%, #ffe6b0 50%, #ffcf6b 78%, transparent);
+  opacity: .85;
+}
+.creed-card::after {
+  content: "心得"; position: absolute; right: -6px; bottom: -26px;
+  font-size: 92px; font-weight: 900; letter-spacing: 0.04em; line-height: 1;
+  color: #ffcf6b; opacity: 0.06; pointer-events: none;
+}
+.creed-head { display: flex; align-items: center; gap: 11px; margin-bottom: 15px; }
+.creed-head h2 { margin: 0; font-size: 18.5px; color: #ffd98a; letter-spacing: 0.02em; }
+.creed-seal {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 18px;
+  background: rgba(255,207,107,0.14); border: 1px solid rgba(255,207,107,0.42);
+  box-shadow: 0 0 20px -6px rgba(255,207,107,0.7);
+}
+.creed-motto {
+  position: relative; margin: 0 0 16px; padding-left: 16px;
+  font-size: 18px; font-weight: 700; line-height: 1.78; color: #ffe4ab;
+  border-left: 3px solid rgba(255,207,107,0.6);
+}
+.creed-list { position: relative; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.creed-list li {
+  position: relative; padding-left: 26px;
+  font-size: 15.5px; line-height: 1.86; color: var(--text);
+}
+.creed-list li::before {
+  content: "一"; position: absolute; left: 0; top: 0;
+  font-size: 14px; font-weight: 800; color: rgba(255,207,107,0.85);
+}
+.creed-list li:nth-child(2)::before { content: "二"; }
+.creed-list li:nth-child(3)::before { content: "三"; }
+.creed-list li:nth-child(4)::before { content: "四"; }
+.creed-list li:nth-child(5)::before { content: "五"; }
+@media (max-width: 640px) {
+  .creed-card { padding: 22px 19px; }
+  .creed-card::after { font-size: 64px; }
+  .creed-motto { font-size: 16.5px; }
+}
+
 /* --- 参考文献カード内：プロトコル・技術資料 --- */
 .proto-block { margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--border); }
 .proto-head {

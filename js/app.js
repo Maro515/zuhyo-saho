@@ -421,6 +421,18 @@
     </div>`;
   }
 
+  /* ページの締めくくり。「図をどう読むか」ではなく「自分がその実験・解析を
+     やるとき何を心得るか」を書く。内容のある項目にだけ置き、無い項目は出さない。 */
+  function renderCreedHtml(ch, topic) {
+    const c = (window.CREED && window.CREED[ch.id + ":" + topic.id]) || null;
+    if (!c || (!c.motto && !(c.points && c.points.length))) return "";
+    return `<div class="creed-card" id="sec-creed">
+      <div class="creed-head"><span class="creed-seal">🥋</span><h2>研究者の心得</h2></div>
+      ${c.motto ? `<p class="creed-motto">${escapeHtml(c.motto)}</p>` : ""}
+      ${c.points && c.points.length ? `<ul class="creed-list">${c.points.map((p) => `<li>${escapeHtml(p)}</li>`).join("")}</ul>` : ""}
+    </div>`;
+  }
+
   function renderCautionHtml(topic) {
     if (!topic.cautions || !topic.cautions.length) return "";
     return `<div class="card caution" id="sec-caution">
@@ -490,6 +502,7 @@
     if (topic.cautions && topic.cautions.length) items.push({ id: "sec-caution", label: "誤読しやすい" });
     if (topic.quiz && topic.quiz.length) items.push({ id: "quizHost", label: "理解度クイズ" });
     if (window.PAPERS && window.PAPERS[ch.id + ":" + topic.id]) items.push({ id: "sec-refs", label: "参考文献" });
+    if (window.CREED && window.CREED[ch.id + ":" + topic.id]) items.push({ id: "sec-creed", label: "研究者の心得" });
     if (items.length < 2) return;
 
     const rail = document.createElement("nav");
@@ -557,6 +570,7 @@
         ${renderCautionHtml(topic)}
         <div id="quizHost"></div>
         ${renderTopicPapersHtml(ch, topic)}
+        ${renderCreedHtml(ch, topic)}
         <div class="topic-nav">
           ${prev ? `<a class="nav-card prev" href="#/${ch.id}/${prev.id}"><span>← 前の項目</span><b>${prev.title}</b></a>` : `<a class="nav-card prev" href="#/${ch.id}"><span>← 章の一覧</span><b>${ch.title}</b></a>`}
           ${next ? `<a class="nav-card next" href="#/${ch.id}/${next.id}"><span>次の項目 →</span><b>${next.title}</b></a>` : `<a class="nav-card next" href="#/${ch.id}"><span>章を完了 →</span><b>一覧に戻る</b></a>`}
