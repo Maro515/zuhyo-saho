@@ -249,6 +249,25 @@
       ? `<span class="hint">${cp.total}/${ch.count} 項目を公開中・順次追加します</span>`
       : `<span class="hint">クリックして体験</span>`;
 
+    // 章末：この章の各手法を実際に使った代表論文（PubMed検証済み）
+    const paperRows = ch.topics.filter((t) => !t.planned).map((t) => {
+      const ps = (window.PAPERS && window.PAPERS[ch.id + ":" + t.id]) || [];
+      if (!ps.length) return "";
+      return `<div class="pp-item">
+        <div class="pp-topic"><span class="pp-no">${t.no}</span><a href="#/${ch.id}/${t.id}">${escapeHtml(t.title)}</a></div>
+        <ul class="pp-list">${ps.map((p) => `
+          <li>
+            <a class="pp-title" href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener noreferrer">${escapeHtml(p.title)}</a>
+            <span class="pp-meta">${escapeHtml(p.authors)} ・ <i>${escapeHtml(p.journal)}</i> ${p.year} ・ PMID ${p.pmid}</span>
+            ${p.note ? `<span class="pp-note">${escapeHtml(p.note)}</span>` : ""}
+          </li>`).join("")}</ul>
+      </div>`;
+    }).join("");
+    const papersHtml = paperRows
+      ? `<div class="section-title"><h2>この章の手法を使った代表論文</h2><span class="hint">PubMedで実在を確認済み・クリックで原著へ</span></div>
+         <div class="papers-box" style="--chip-color:${ch.color};--chip-soft:${ch.colorSoft}">${paperRows}</div>`
+      : "";
+
     // 前後の章へのナビゲーション
     const all = window.BOOK.chapters;
     const ci = all.findIndex((c) => c.id === ch.id);
@@ -266,6 +285,7 @@
         ${chapterHeaderHtml(ch)}
         <div class="section-title"><h2>この章の項目</h2>${hint}</div>
         ${listHtml}
+        ${papersHtml}
         ${chNav}
       </div>
     `);
@@ -500,13 +520,17 @@
         </div>
       </div>
     `);
+    // 素早く連続でページを切り替えると、描画先が次の描画で差し替わって
+    // 消えていることがある。その場合は静かに諦める（次の render が描き直す）。
     const widgetMount = document.querySelector("#widgetHost .widget-mount");
-    try {
-      if (window.WIDGETS && window.WIDGETS[topic.widget]) window.WIDGETS[topic.widget](widgetMount, topic, ch);
-      else widgetMount.innerHTML = `<p style="color:var(--text-muted);font-size:13px">この項目のインタラクティブ教材は準備中です。</p>`;
-    } catch (e) {
-      console.error("widget render failed:", topic.widget, e);
-      widgetMount.innerHTML = `<p style="color:var(--danger);font-size:13px">教材の読み込み中にエラーが発生しました。</p>`;
+    if (widgetMount) {
+      try {
+        if (window.WIDGETS && window.WIDGETS[topic.widget]) window.WIDGETS[topic.widget](widgetMount, topic, ch);
+        else widgetMount.innerHTML = `<p style="color:var(--text-muted);font-size:13px">この項目のインタラクティブ教材は準備中です。</p>`;
+      } catch (e) {
+        console.error("widget render failed:", topic.widget, e);
+        if (widgetMount.isConnected) widgetMount.innerHTML = `<p style="color:var(--danger);font-size:13px">教材の読み込み中にエラーが発生しました。</p>`;
+      }
     }
     renderQuiz(document.getElementById("quizHost"), ch, topic);
     setupRail(topic, ch);

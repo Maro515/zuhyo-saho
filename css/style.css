@@ -723,6 +723,43 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 .chapter-grid .chapter-card:nth-child(n+10) { animation-delay: .38s; }
 
 /* =========================================================================
+   章末：代表論文リスト
+   ========================================================================= */
+.papers-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-m);
+  padding: 8px 24px; backdrop-filter: blur(11px); -webkit-backdrop-filter: blur(11px);
+  box-shadow: var(--shadow-s);
+}
+.pp-item { padding: 18px 0; border-bottom: 1px dashed var(--border); }
+.pp-item:last-child { border-bottom: none; }
+.pp-topic { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+.pp-topic a { font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none; }
+.pp-topic a:hover { color: var(--cyan); }
+.pp-no {
+  flex-shrink: 0; min-width: 30px; height: 26px; padding: 0 8px; border-radius: 8px;
+  display: grid; place-items: center; font-family: var(--font-mono); font-size: 12.5px; font-weight: 800;
+  background: var(--chip-soft, rgba(58,231,255,0.12)); color: var(--chip-color, var(--cyan));
+  border: 1px solid color-mix(in srgb, var(--chip-color, var(--cyan)) 34%, transparent);
+}
+.pp-list { margin: 0; padding: 0 0 0 40px; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.pp-list li { position: relative; padding-left: 20px; }
+.pp-list li::before {
+  content: "📄"; position: absolute; left: 0; top: 2px; font-size: 12px;
+}
+.pp-title {
+  display: block; font-size: 15px; line-height: 1.62; font-weight: 600;
+  color: #b9ccff; text-decoration: none;
+}
+.pp-title:hover { color: var(--cyan); text-decoration: underline; }
+.pp-meta { display: block; margin-top: 3px; font-size: 12.5px; color: var(--text-faint); line-height: 1.6; }
+.pp-meta i { font-style: italic; color: var(--text-muted); }
+.pp-note { display: block; margin-top: 4px; font-size: 13px; color: var(--text-muted); line-height: 1.72; }
+@media (max-width: 640px) {
+  .papers-box { padding: 6px 17px; }
+  .pp-list { padding-left: 8px; }
+}
+
+/* =========================================================================
    読書進捗バー — ページ最上部の細いスペクトル線
    ========================================================================= */
 .scroll-progress {
