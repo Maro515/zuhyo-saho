@@ -73,6 +73,7 @@
     const h = location.hash.replace(/^#\/?/, "");
     if (!h) return { view: "home" };
     const parts = h.split("/").filter(Boolean);
+    if (parts[0] === "analyze") return { view: "analyze" };
     if (parts.length === 1) return { view: "chapter", chId: parts[0] };
     return { view: "topic", chId: parts[0], topicId: parts[1] };
   }
@@ -88,6 +89,7 @@
     navPrevHash = navNextHash = null;
     destroyRail();
     if (route.view === "home") return viewHome();
+    if (route.view === "analyze") return viewAnalyze();
     const ch = findChapter(route.chId);
     if (!ch) return viewNotFound();
     if (route.view === "chapter") {
@@ -184,6 +186,14 @@
           </div>
         </section>
         ${resumeHtml}
+        <a class="analyze-banner" href="#/analyze">
+          <span class="ab-ico">🔬</span>
+          <span class="ab-body">
+            <b>手元の論文から学ぶテーマを見つける</b>
+            <span>PDF・本文・URLを読み込み、使われている手法を抽出して学習ルートを提案します</span>
+          </span>
+          <span class="ab-go">論文アナライザ →</span>
+        </a>
         <div class="section-title"><h2>章を選ぶ</h2><span class="hint">全11章・書籍の目次に対応</span></div>
         <div class="chapter-grid">${cards}</div>
         <div class="site-footer">個人の学習用に、書籍の構成・要点を参考にオリジナルの解説とインタラクティブ図解として再構成したものです。図版の転載はしていません。</div>
@@ -821,9 +831,314 @@
     else if (ev.key === "ArrowRight" && navNextHash) { location.hash = navNextHash; }
   });
 
+  /* =========================================================================
+     論文アナライザ — PDF/テキスト/URLから手法を抽出し学ぶテーマを提案
+     すべてブラウザ内で完結。論文は外部に送信しない。
+     ========================================================================= */
+
+  // 論文中で頻出するが多義的で誤検出しやすい略号。単独では弱く数える。
+  const AMBIG = new Set(["ct", "sem", "ip", "ms", "mr", "pet", "es", "cd", "if", "hr", "rt", "or", "ci", "tem", "pca", "roc", "go", "st"]);
+  // 手法名として無意味な一般語。見出し・英名を区切って生じる断片のうち、
+  // それ自体では手法を特定できないものを除外する（誤検出の主因）。
+  const TERM_STOP = new Set([
+    "assay", "analysis", "method", "methods", "test", "システム", "解析", "法", "試験", "測定", "解析法",
+    "dna", "rna", "cdna", "mrna", "protein", "proteins", "gene", "genes", "cell", "cells", "culture",
+    "editing", "targeting", "imaging", "sequencing", "microscopy", "staining", "labeling", "profiling",
+    "screening", "model", "models", "language model", "tissue", "single cell", "single-cell",
+    "chart", "plot", "curve", "score", "index", "map", "data",
+    "column chart", "curve fitting", "correlation analysis", "linear regression",
+  ]);
+
+  function foldText(s) {
+    try { s = s.normalize("NFKC"); } catch (e) { /* ignore */ }
+    return s.toLowerCase();
+  }
+  function isLatinTerm(t) { return !/[^ -ɏ]/.test(t); }
+
+  let METHODS_INDEX = null;
+  function methodsIndex() {
+    if (METHODS_INDEX) return METHODS_INDEX;
+    METHODS_INDEX = [];
+    window.BOOK.chapters.forEach((ch) => {
+      (ch.topics || []).filter((t) => !t.planned).forEach((t) => {
+        const key = ch.id + ":" + t.id;
+        const terms = [];
+        const seen = new Map();
+        const add = (raw, w) => {
+          const s = foldText(String(raw || "").trim());
+          if (!s || s.length < 2 || TERM_STOP.has(s)) return;
+          if (isLatinTerm(s) && s.length < 2) return;
+          // 同じ表記が複数ソースから来たら最大の重みを採用する
+          // （別名由来の低い重みが、後から来る同義語の高い重みを打ち消さないように）
+          const prev = seen.get(s);
+          if (prev) { if (w > prev.w) prev.w = w; return; }
+          const term = { s: s, disp: String(raw).trim(), w: w, latin: isLatinTerm(s) };
+          seen.set(s, term);
+          terms.push(term);
+        };
+        // 見出し（和名）は具体的なのでやや高い重み。区切りを含む見出しは分解して取り込む
+        const split = (str) => String(str || "").split(/[\/,;・／（）()]+/).map((x) => x.trim()).filter(Boolean);
+        add(t.title, 2);
+        split(t.title).forEach((p) => add(p, 2));
+        // 英名・別名も区切りで各表記に分解
+        split(t.en).forEach((p) => add(p, /\s/.test(p) ? 2 : 1.6));
+        split(t.aka).forEach((p) => add(p, /\s/.test(p) || !isLatinTerm(p) ? 1.7 : 1.3));
+        // 手作業で足した同義語（recall向上用。任意）
+        const syn = (window.METHODS_SYN && window.METHODS_SYN[key]) || [];
+        syn.forEach((p) => add(p, 2.4));
+        METHODS_INDEX.push({ key: key, ch: ch, t: t, terms: terms });
+      });
+    });
+    return METHODS_INDEX;
+  }
+
+  function countLatin(text, term) {
+    // ハイフン/空白は柔軟に、末尾の複数形 s も許容（curve→curves, interval→intervals）
+    const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[\s-]+/g, "[\\s-]?");
+    let re;
+    try { re = new RegExp("(^|[^a-z0-9])(" + esc + ")s?(?![a-z0-9])", "gi"); }
+    catch (e) { return 0; }
+    let n = 0, m;
+    while ((m = re.exec(text)) && n < 60) { n++; if (m.index === re.lastIndex) re.lastIndex++; }
+    return n;
+  }
+  function countCjk(text, term) {
+    let n = 0, i = 0;
+    while ((i = text.indexOf(term, i)) >= 0 && n < 60) { n++; i += term.length; }
+    return n;
+  }
+
+  function analyzeText(raw) {
+    const text = foldText(raw);
+    if (text.replace(/\s/g, "").length < 40) return { tooShort: true, hits: [] };
+    const idx = methodsIndex();
+    const hits = [];
+    idx.forEach((entry) => {
+      let score = 0, distinct = 0, strong = false;
+      const matched = [];
+      entry.terms.forEach((term) => {
+        const cnt = term.latin ? countLatin(text, term.s) : countCjk(text, term.s);
+        if (!cnt) return;
+        const amb = AMBIG.has(term.s);
+        const w = term.w * (amb ? 0.22 : 1);
+        score += w * (1 + Math.log2(Math.min(cnt, 8)));
+        distinct++;
+        if (!amb && term.w >= 1.6) strong = true;
+        matched.push({ disp: term.disp, cnt: cnt, amb: amb });
+      });
+      if (!matched.length) return;
+      if (distinct >= 2) score *= 1.18;
+      if (!strong && matched.every((mm) => mm.amb)) score *= 0.35; // 多義略号のみ → 大きく減点
+      // 表示用に出現回数の多い順・非多義優先
+      matched.sort((a, b) => (a.amb - b.amb) || (b.cnt - a.cnt));
+      hits.push({ entry: entry, score: score, matched: matched.slice(0, 4), strong: strong });
+    });
+    hits.sort((a, b) => b.score - a.score);
+    const top = hits.length ? hits[0].score : 0;
+    // 特定性の高い単一表記（UMAP等）1個でも拾えるよう絶対下限は低めに、
+    // 相対下限で無関係なノイズを落とす。
+    const cut = Math.max(1.5, top * 0.13);
+    const kept = hits.filter((h) => h.score >= cut).slice(0, 20);
+    return { tooShort: false, hits: kept, total: hits.length };
+  }
+
+  function analysisResultsHtml(res) {
+    if (res.tooShort) {
+      return `<div class="an-empty">テキストが短すぎます。要旨や方法（Methods）の段落を含む、まとまった本文を入力してください。</div>`;
+    }
+    if (!res.hits.length) {
+      return `<div class="an-empty">既知の手法を検出できませんでした。方法（Methods）セクションの文章を入れると精度が上がります。英語の本文にも対応しています。</div>`;
+    }
+    const maxScore = res.hits[0].score;
+    // 検出手法リスト
+    const list = res.hits.map((h) => {
+      const ch = h.entry.ch, t = h.entry.t;
+      const conf = Math.max(8, Math.round((h.score / maxScore) * 100));
+      const chips = h.matched.map((m) => `<span class="an-term${m.amb ? " amb" : ""}">${escapeHtml(m.disp)}${m.cnt > 1 ? ` ×${m.cnt}` : ""}</span>`).join("");
+      return `<a class="an-hit" href="#/${ch.id}/${t.id}" style="--chip-color:${ch.color};--chip-soft:${ch.colorSoft}">
+        <div class="an-hit-main">
+          <div class="an-hit-head"><span class="an-hit-no">${ch.number}-${t.no}</span><b>${escapeHtml(t.title)}</b>${t.en ? `<span class="an-hit-en">${escapeHtml(t.en)}</span>` : ""}</div>
+          <div class="an-terms">${chips}</div>
+        </div>
+        <div class="an-hit-side">
+          <div class="an-conf"><i style="width:${conf}%"></i></div>
+          <span class="an-go">学ぶ →</span>
+        </div>
+      </a>`;
+    }).join("");
+
+    // テーマ（章ごとのまとまり）
+    const byCh = {};
+    res.hits.forEach((h) => { const c = h.entry.ch; (byCh[c.id] = byCh[c.id] || { ch: c, n: 0 }).n++; });
+    const themes = Object.values(byCh).filter((x) => x.n >= 2).sort((a, b) => b.n - a.n);
+    const themeHtml = themes.length ? `
+      <div class="section-title"><h2>学ぶべきテーマ</h2><span class="hint">検出が集中した分野</span></div>
+      <div class="an-themes">${themes.map((x) => `
+        <a class="an-theme" href="#/${x.ch.id}" style="--accent-color:${x.ch.color};--accent-soft-color:${x.ch.colorSoft}">
+          <span class="an-theme-no">${String(x.ch.number).padStart(2, "0")}</span>
+          <span class="an-theme-body"><b>第${x.ch.number}章 ${escapeHtml(x.ch.title)}</b><span>${x.n} 手法を検出</span></span>
+          <span class="an-go">→</span>
+        </a>`).join("")}</div>` : "";
+
+    // おすすめ学習ルート（書籍の章順＝基礎から応用へ）
+    const path = res.hits.slice().sort((a, b) => (a.entry.ch.number - b.entry.ch.number) || (a.entry.t.no - b.entry.t.no)).slice(0, 8);
+    const pathHtml = `
+      <div class="section-title"><h2>おすすめ学習ルート</h2><span class="hint">基礎から応用の順に並べています</span></div>
+      <ol class="an-path">${path.map((h) => `
+        <li><a href="#/${h.entry.ch.id}/${h.entry.t.id}" style="--chip-color:${h.entry.ch.color}">
+          <span class="an-path-tag">第${h.entry.ch.number}章</span><b>${escapeHtml(h.entry.t.title)}</b>
+        </a></li>`).join("")}</ol>`;
+
+    return `
+      <div class="an-result-head">📊 <b>${res.hits.length}</b> 個の手法・解析を検出しました${res.total > res.hits.length ? `<span class="an-more">（関連度の高い順に表示）</span>` : ""}</div>
+      <div class="section-title"><h2>検出された手法</h2><span class="hint">クリックでその項目へ</span></div>
+      <div class="an-hits">${list}</div>
+      ${themeHtml}
+      ${pathHtml}`;
+  }
+
+  // --- PDF.js の遅延読込（解析ページで初めて必要になったとき） ---
+  let pdfjsPromise = null;
+  function loadPdfjs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (pdfjsPromise) return pdfjsPromise;
+    pdfjsPromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "js/vendor/pdf.min.js";
+      s.onload = () => {
+        if (window.pdfjsLib) {
+          try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = "js/vendor/pdf.worker.min.js"; } catch (e) { /* ignore */ }
+          resolve(window.pdfjsLib);
+        } else reject(new Error("pdfjs load failed"));
+      };
+      s.onerror = () => reject(new Error("pdfjs load failed"));
+      document.head.appendChild(s);
+    });
+    return pdfjsPromise;
+  }
+  async function extractPdfText(file, onProgress) {
+    const lib = await loadPdfjs();
+    const buf = await file.arrayBuffer();
+    const pdf = await lib.getDocument({ data: buf }).promise;
+    const nPages = Math.min(pdf.numPages, 60);
+    let out = [];
+    for (let i = 1; i <= nPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      out.push(tc.items.map((it) => it.str).join(" "));
+      if (onProgress) onProgress(i, nPages);
+    }
+    return out.join("\n");
+  }
+
+  let analyzeMode = "text";
+  function viewAnalyze() {
+    METHODS_INDEX = null; // 章データ確定後に作り直せるよう毎回リセット
+    const nTopics = methodsIndex().length;
+    mount(`
+      <div class="wrap">
+        <div class="crumbs"><a href="#/">ホーム</a><span class="sep">/</span><span class="current">論文アナライザ</span></div>
+        <section class="an-hero">
+          <span class="kicker">🔬 論文から学ぶ</span>
+          <h1>論文を読み込み、<span class="accent">学ぶべきテーマ</span>を提案</h1>
+          <p class="lead">論文のPDF・本文テキスト・URLから、使われている実験法や解析手法を自動で抽出し、全${nTopics}項目の中から学ぶべき項目と学習ルートを提案します。</p>
+          <p class="an-privacy">🔒 解析はすべてお使いのブラウザ内で行われます。論文が外部に送信されることはありません。</p>
+        </section>
+
+        <div class="an-panel">
+          <div class="an-tabs">
+            <button type="button" class="an-tab" data-m="text">📝 テキストを貼り付け</button>
+            <button type="button" class="an-tab" data-m="pdf">📄 PDFをアップロード</button>
+            <button type="button" class="an-tab" data-m="url">🔗 URL</button>
+          </div>
+          <div class="an-body">
+            <div class="an-mode" data-m="text">
+              <textarea id="anText" placeholder="論文の要旨（Abstract）や方法（Methods）の段落を貼り付けてください。英語・日本語どちらでも解析できます。"></textarea>
+              <div class="an-actions"><button type="button" class="btn primary" id="anRun">この内容を解析する</button></div>
+            </div>
+            <div class="an-mode" data-m="pdf" hidden>
+              <label class="an-drop" id="anDrop">
+                <input type="file" id="anFile" accept="application/pdf,.pdf" hidden />
+                <span class="an-drop-ico">📄</span>
+                <span class="an-drop-main">PDFファイルを選択</span>
+                <span class="an-drop-sub">クリックして選ぶか、ここにドラッグ＆ドロップ</span>
+              </label>
+              <div class="an-file-status" id="anFileStatus"></div>
+            </div>
+            <div class="an-mode" data-m="url" hidden>
+              <div class="an-url-row">
+                <input type="url" id="anUrl" placeholder="https://… 論文のフルテキストページのURL" />
+                <button type="button" class="btn primary" id="anUrlRun">取得して解析</button>
+              </div>
+              <p class="an-url-note">出版社サイトの多くはブラウザからの直接取得（CORS）を許可していません。取得できない場合は、本文をコピーして「テキストを貼り付け」からご利用ください。PubMed Central（PMC）の本文ページなど、一部は取得できます。</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="anResults" class="an-results"></div>
+      </div>
+    `);
+
+    const modes = root.querySelectorAll(".an-mode");
+    const tabs = root.querySelectorAll(".an-tab");
+    function setMode(m) {
+      analyzeMode = m;
+      tabs.forEach((b) => b.classList.toggle("active", b.dataset.m === m));
+      modes.forEach((el) => (el.hidden = el.dataset.m !== m));
+    }
+    tabs.forEach((b) => b.addEventListener("click", () => setMode(b.dataset.m)));
+    setMode(analyzeMode);
+
+    const resultsEl = document.getElementById("anResults");
+    function showBusy(msg) { resultsEl.innerHTML = `<div class="an-busy"><span class="an-spin"></span>${escapeHtml(msg)}</div>`; }
+    function render(res) {
+      resultsEl.innerHTML = analysisResultsHtml(res);
+      resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    function runOn(text) {
+      if (!text || text.replace(/\s/g, "").length < 40) { render({ tooShort: true, hits: [] }); return; }
+      showBusy("解析しています…");
+      setTimeout(() => render(analyzeText(text)), 30);
+    }
+
+    document.getElementById("anRun").addEventListener("click", () => runOn(document.getElementById("anText").value));
+
+    // PDF
+    const fileInput = document.getElementById("anFile");
+    const drop = document.getElementById("anDrop");
+    const fstatus = document.getElementById("anFileStatus");
+    function handlePdf(file) {
+      if (!file) return;
+      if (!/pdf$/i.test(file.name) && file.type !== "application/pdf") { fstatus.innerHTML = `<span class="an-err">PDFファイルを選んでください。</span>`; return; }
+      fstatus.innerHTML = `<span class="an-file-name">📄 ${escapeHtml(file.name)}</span>`;
+      showBusy("PDFを読み込んでいます…");
+      extractPdfText(file, (i, n) => showBusy(`PDFを読み込んでいます… (${i}/${n} ページ)`))
+        .then((text) => { runOn(text); })
+        .catch((e) => { console.error(e); resultsEl.innerHTML = `<div class="an-empty">PDFの読み込みに失敗しました。スキャン画像のみのPDF（文字情報なし）や暗号化されたPDFは解析できません。本文をコピーして「テキストを貼り付け」からお試しください。</div>`; });
+    }
+    fileInput.addEventListener("change", () => handlePdf(fileInput.files[0]));
+    ["dragover", "dragenter"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+    drop.addEventListener("drop", (e) => { const f = e.dataTransfer && e.dataTransfer.files[0]; handlePdf(f); });
+
+    // URL
+    document.getElementById("anUrlRun").addEventListener("click", () => {
+      const url = document.getElementById("anUrl").value.trim();
+      if (!/^https?:\/\//.test(url)) { render({ tooShort: false, hits: [], total: 0 }); showToast("http(s) から始まるURLを入力してください"); return; }
+      showBusy("ページを取得しています…");
+      fetch(url).then((r) => r.text()).then((html) => {
+        const txt = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/gi, " ");
+        runOn(txt);
+      }).catch(() => {
+        resultsEl.innerHTML = `<div class="an-empty">このURLはブラウザから直接取得できませんでした（多くの出版社サイトはCORSで保護されています）。お手数ですが、本文をコピーして「テキストを貼り付け」からご利用ください。</div>`;
+      });
+    });
+  }
+
   window.APP = {
     navigate: (h) => (location.hash = h),
     showToast, isDone, markDone, chapterProgress, overallProgress,
     openSearch: openCmdk,
+    openAnalyzer: () => (location.hash = "#/analyze"),
   };
 })();
