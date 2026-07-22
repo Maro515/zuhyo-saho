@@ -221,58 +221,58 @@
   };
 
   // ==========================================================================
-  // t69 ddpcr — ポアソン分配と飽和（ダイナミックレンジ）
+  // t69 simoa — デジタルELISA：ポアソン単一分子計数と飽和（デジタル→アナログ）
   // ==========================================================================
-  W.ddpcr = function (container) {
-    const state = { lambda: 1.0 };
+  W.simoa = function (container) {
+    const state = { aeb: 1.0 };
     const COLS = 16, ROWS = 12;
     container.innerHTML = `
       <div class="w-controls" style="margin-bottom:14px">
-        ${sliderRow("dd_l", "濃度（1液滴あたりの平均コピー数 λ）", 0.02, 6, 0.02, 1.0, (v) => v.toFixed(2) + " コピー/液滴")}
+        ${sliderRow("sm_l", "濃度（1ビーズあたりの平均酵素数 AEB）", 0.02, 6, 0.02, 1.0, (v) => v.toFixed(2) + " 酵素/ビーズ")}
       </div>
-      <div class="widget-stage"><div id="dd_plot"></div>
-        <div class="legend-row"><span class="li"><span class="sw" style="background:#d946ef"></span>陽性（1コピー以上）</span><span class="li"><span class="sw" style="background:#dfe4ee"></span>陰性（0コピー）</span></div></div>
-      ${readoutRow([{ id: "dd_p", label: "陽性割合 p", value: "—" }, { id: "dd_e", label: "推定コピー数 λ = −ln(1−p)", value: "—" }])}
-      <p class="widget-note">標的は液滴に<b>ポアソン分布</b>で分配されます。陰性の割合 e^(−λ) から <b>λ = −ln(1−p)</b> を逆算して絶対定量します。濃度を上げて p が1に近づくと、<b>ほぼ全液滴が陽性になり λ の推定が不安定に</b>（飽和）なることに注目してください。</p>`;
+      <div class="widget-stage"><div id="sm_plot"></div>
+        <div class="legend-row"><span class="li"><span class="sw" style="background:#d946ef"></span>点灯（酵素1個以上）</span><span class="li"><span class="sw" style="background:#dfe4ee"></span>消灯（酵素0個）</span></div></div>
+      ${readoutRow([{ id: "sm_p", label: "点灯割合 f_on", value: "—" }, { id: "sm_e", label: "推定 AEB = −ln(1−f_on)", value: "—" }])}
+      <p class="widget-note">酵素標識された標的はビーズに<b>ポアソン分布</b>で分配され、微小反応槽に封じられます。消灯の割合 e^(−AEB) から <b>AEB = −ln(1−f_on)</b> を逆算する<b>デジタル計数</b>です。濃度を上げて f_on が1に近づくと、<b>ほぼ全ビーズが点灯して計数が飽和</b>し、この先は<b>アナログ測定</b>の領域になります。</p>`;
     function poiss(rng, lam) { const L = Math.exp(-lam); let k = 0, p = 1; do { k++; p *= rng(); } while (p > L); return k - 1; }
     function draw() {
-      const w = 540, h = 300, s = lightPanel(document.getElementById("dd_plot"), w, h);
-      const lam = state.lambda;
+      const w = 540, h = 300, s = lightPanel(document.getElementById("sm_plot"), w, h);
+      const lam = state.aeb;
       const rng = CK.makeRng(2024);
       const gx = 26, gy = 46, cell = 16, gap = 2.4;
       const N = COLS * ROWS;
       let pos = 0;
-      txt(s, gx, gy - 16, "液滴（陽性 / 陰性）", { "font-size": 10.5, fill: "#565f73", "font-weight": 700 });
+      txt(s, gx, gy - 16, "ビーズ（点灯 / 消灯）", { "font-size": 10.5, fill: "#565f73", "font-weight": 700 });
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-          const positive = poiss(rng, lam) >= 1;
-          if (positive) pos++;
+          const on = poiss(rng, lam) >= 1;
+          if (on) pos++;
           const cx = gx + c * (cell + gap) + cell / 2, cy = gy + r * (cell + gap) + cell / 2;
-          add(s, "circle", { cx: cx, cy: cy, r: cell / 2 - 1, fill: positive ? MAG : "#dfe4ee", opacity: positive ? 0.9 : 1, stroke: "#c7cce0", "stroke-width": 0.6 });
+          add(s, "circle", { cx: cx, cy: cy, r: cell / 2 - 1, fill: on ? MAG : "#dfe4ee", opacity: on ? 0.9 : 1, stroke: "#c7cce0", "stroke-width": 0.6 });
         }
       }
       const pObs = pos / N;
-      const lamEst = pObs >= 1 ? Infinity : -Math.log(1 - pObs);
-      // 右側：p = 1 − e^(−λ) の曲線と飽和域
+      const aebEst = pObs >= 1 ? Infinity : -Math.log(1 - pObs);
+      // 右側：f_on = 1 − e^(−AEB) の曲線と飽和域
       const cx0 = 330, cx1 = 512, cyb = 210, cyt = 56;
       const LX = (l) => cx0 + (l / 6) * (cx1 - cx0);
       const PY = (pp) => cyb - pp * (cyb - cyt);
       add(s, "rect", { x: cx0, y: PY(1), width: cx1 - cx0, height: PY(0.9) - PY(1), fill: ORANGE, opacity: 0.14 });
-      txt(s, (cx0 + cx1) / 2, PY(0.955) + 3, "飽和域", { "text-anchor": "middle", "font-size": 8.5, fill: ORANGE, "font-weight": 700 });
+      txt(s, (cx0 + cx1) / 2, PY(0.955) + 3, "飽和→アナログ", { "text-anchor": "middle", "font-size": 8.5, fill: ORANGE, "font-weight": 700 });
       add(s, "line", { x1: cx0, x2: cx1, y1: cyb, y2: cyb, stroke: "#c7cce0", "stroke-width": 1.2 });
       add(s, "line", { x1: cx0, x2: cx0, y1: cyt, y2: cyb, stroke: "#c7cce0", "stroke-width": 1.2 });
       [0, 2, 4, 6].forEach((l) => txt(s, LX(l), cyb + 14, String(l), { "text-anchor": "middle", "font-size": 8.5 }));
       [0, 0.5, 1].forEach((pp) => txt(s, cx0 - 5, PY(pp) + 3, pp.toFixed(1), { "text-anchor": "end", "font-size": 8.5 }));
-      txt(s, (cx0 + cx1) / 2, cyb + 28, "λ（コピー/液滴）", { "text-anchor": "middle", "font-size": 9.5, fill: "#565f73", "font-weight": 700 });
-      txt(s, cx0 - 22, (cyt + cyb) / 2, "陽性割合 p", { "text-anchor": "middle", "font-size": 9.5, fill: "#565f73", "font-weight": 700, transform: `rotate(-90 ${cx0 - 22} ${(cyt + cyb) / 2})` });
+      txt(s, (cx0 + cx1) / 2, cyb + 28, "AEB（酵素/ビーズ）", { "text-anchor": "middle", "font-size": 9.5, fill: "#565f73", "font-weight": 700 });
+      txt(s, cx0 - 22, (cyt + cyb) / 2, "点灯割合 f_on", { "text-anchor": "middle", "font-size": 9.5, fill: "#565f73", "font-weight": 700, transform: `rotate(-90 ${cx0 - 22} ${(cyt + cyb) / 2})` });
       let d = "";
       for (let l = 0; l <= 6; l += 0.05) d += (d ? " L " : "M ") + LX(l).toFixed(1) + " " + PY(1 - Math.exp(-l)).toFixed(1);
       add(s, "path", { d: d, fill: "none", stroke: MAG, "stroke-width": 2.4 });
       add(s, "circle", { cx: LX(lam), cy: PY(1 - Math.exp(-lam)), r: 5, fill: MAG });
-      setReadout("dd_p", (pObs * 100).toFixed(1) + " %");
-      setReadout("dd_e", pObs >= 0.995 ? "飽和：推定不能" : lamEst.toFixed(2) + " コピー/液滴" + (pObs > 0.9 ? "（飽和に近く不確か）" : ""));
+      setReadout("sm_p", (pObs * 100).toFixed(1) + " %");
+      setReadout("sm_e", pObs >= 0.995 ? "飽和：デジタル計数不能" : aebEst.toFixed(2) + " 酵素/ビーズ" + (pObs > 0.9 ? "（飽和に近く不確か）" : ""));
     }
-    bindSlider("dd_l", (v) => v.toFixed(2) + " コピー/液滴", (v) => { state.lambda = v; draw(); });
+    bindSlider("sm_l", (v) => v.toFixed(2) + " 酵素/ビーズ", (v) => { state.aeb = v; draw(); });
     draw();
   };
 

@@ -21,7 +21,7 @@ window.METHODS_SYN = Object.assign(window.METHODS_SYN || {}, {
 "ch12:t66": ["analytical ultracentrifugation", "analytical ultracentrifuge", "sedimentation velocity", "sedimentation equilibrium", "sedimentation coefficient distribution", "SV-AUC", "SEDFIT", "SEDPHAT", "分析用超遠心", "分析用超遠心機", "沈降速度法", "沈降平衡法", "沈降係数分布", "沈降解析"],
   "ch12:t67": ["native mass spectrometry", "native MS", "native electrospray", "native nano-ESI", "native top-down mass spectrometry", "無変性質量分析", "非変性質量分析", "ネイティブ質量分析"],
   "ch12:t68": ["ion mobility mass spectrometry", "ion mobility-mass spectrometry", "IM-MS", "IMS-MS", "collision cross section", "collision cross-section", "traveling wave ion mobility", "TWIMS", "trapped ion mobility", "timsTOF", "イオンモビリティ質量分析", "イオン移動度質量分析", "衝突断面積", "断面積分離"],
-  "ch12:t69": ["droplet digital PCR", "digital droplet PCR", "digital PCR", "ddPCR", "dPCR", "absolute quantification PCR", "Poisson partitioning", "デジタルPCR", "液滴デジタルPCR", "絶対定量PCR", "ドロップレットデジタルPCR"],
+  "ch12:t69": ["single molecule array", "single-molecule array", "simoa", "digital elisa", "digital immunoassay", "single-molecule immunoassay", "single molecule counting", "quanterix", "ultrasensitive immunoassay", "average enzymes per bead", "単一分子アレイ", "デジタルelisa", "デジタル免疫測定", "超高感度免疫測定", "単一分子タンパク質計数"],
 
 /* METHODS_SYN["ch12:tNN"] の配列（論文アナライザ用の表記ゆれ／補強のみ） */
 

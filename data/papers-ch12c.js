@@ -74,8 +74,8 @@ window.PAPERS = Object.assign(window.PAPERS || {}, {
     { pmid: "36827511", title: "Ion Mobility Mass Spectrometry (IM-MS) for Structural Biology: Insights Gained by Measuring Mass, Charge, and Collision Cross Section.", authors: "Christofi E et al.", journal: "Chemical reviews", year: "2023", doi: "10.1021/acs.chemrev.2c00600", note: "質量・電荷・衝突断面積の3つを測って構造情報を引き出すIM-MSの原理と応用を包括的にまとめた代表的総説です。" },
   ],
   "ch12:t69": [
-    { pmid: "22035192", title: "High-throughput droplet digital PCR system for absolute quantitation of DNA copy number.", authors: "Hindson BJ et al.", journal: "Analytical chemistry", year: "2011", doi: "10.1021/ac202028g", note: "約2万滴に分けてDNAコピー数を絶対定量する液滴デジタルPCRシステムを報告した、ddPCR普及の起点となる原著です。" },
-    { pmid: "25981265", title: "Droplet digital PCR for absolute quantification of pathogens.", authors: "Gutiérrez-Aguirre I et al.", journal: "Methods in molecular biology (Clifton, N.J.)", year: "2015", doi: "10.1007/978-1-4939-2620-6_24", note: "Bio-Rad QX100を用いて病原体を絶対定量する具体的な手順を示した、ddPCRの代表的な実務応用の解説です。" },
+    { pmid: "20495550", title: "Single-molecule enzyme-linked immunosorbent assay detects serum proteins at subfemtomolar concentrations.", authors: "Rissin DM et al.", journal: "Nature biotechnology", year: "2010", doi: "10.1038/nbt.1641", note: "抗体ビーズに1分子を捕らえフェムトリットル反応槽で数えるデジタルELISA（Simoa）を確立し、血中タンパク質をサブフェムトモルで検出した原著です。" },
+    { pmid: "30055655", title: "Plasma neurofilament light as a potential biomarker of neurodegeneration in Alzheimer's disease.", authors: "Lewczuk P et al.", journal: "Alzheimer's research & therapy", year: "2018", doi: "10.1186/s13195-018-0404-9", note: "Simoaで血漿の神経フィラメント軽鎖(NfL)を測り、アルツハイマー病の神経変性を血液で捉えられることを示した代表的な臨床応用です。" },
   ],
   "ch12:t70": [
     { pmid: "26000488", title: "Highly Parallel Genome-wide Expression Profiling of Individual Cells Using Nanoliter Droplets.", authors: "Macosko EZ et al.", journal: "Cell", year: "2015", doi: "10.1016/j.cell.2015.05.002", note: "液滴にバーコードビーズと細胞を共封入するDrop-seqの原著。数万細胞を1個ずつ並列に転写解析する液滴1細胞ゲノミクスの代表例です。" },

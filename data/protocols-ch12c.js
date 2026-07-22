@@ -78,8 +78,8 @@ window.PROTOCOLS = Object.assign(window.PROTOCOLS || {}, {
     { type: "db", label: "CCSbase（衝突断面積データベース）", url: "https://ccsbase.net/", note: "測定された衝突断面積（CCS）を集約・予測する公開データベース。IM-MSの値の照合に使われます。" }
   ],
   "ch12:t69": [
-    { type: "vendor", label: "Bio-Rad QX200 Droplet Digital PCR システム", url: "https://www.bio-rad.com/en-us/life-science/digital-pcr/qx200-droplet-digital-pcr-system", note: "液滴デジタルPCRの代表的プラットフォームのメーカー公式ページ。ワークフローと技術資料が参照できます。" },
-    { type: "guide", label: "The Digital MIQE Guidelines Update (dMIQE 2020)", url: "https://pubmed.ncbi.nlm.nih.gov/32746458/", note: "デジタルPCR実験の報告に必要な最小情報を定めた公式ガイドライン。有効液滴数や閾値の記載基準が示されます。" }
+    { type: "vendor", label: "Quanterix: Simoa テクノロジー（公式解説）", url: "https://www.quanterix.com/simoa-technology/", note: "デジタルELISA(Simoa)の原理と装置を解説する開発元の公式ページ。フェムトリットル反応槽と単一分子計数の仕組みが分かります。" },
+    { type: "protocol", label: "Simoaのデジタル/アナログ接続とダイナミックレンジ（Anal. Chem. / PubMed）", url: "https://pubmed.ncbi.nlm.nih.gov/21344864/", note: "単一分子計数(デジタル)と平均強度(アナログ)をAEBで接続し6桁のレンジを得る方法を示した技術論文です。" }
   ],
 
 /* PROTOCOLS["ch12:tNN"] の配列（実在URLを確認） */
